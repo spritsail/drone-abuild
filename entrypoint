@@ -1,0 +1,69 @@
+#!/bin/sh
+set -e
+
+# Only use error colours when stdout is a tty
+if [ -t 2 ]; then
+    RED='\033[0;31m'
+    YLW='\033[0;33m'
+    NC='\033[0m'
+fi
+error() { >&2 printf "${RED}${MSG:-Error}: $@${NC}"; exit 1; }
+warn() { >&2 printf "${YLW}${MSG:-Warning}: $@${NC}"; }
+
+export ABUILDHOME=/drone
+export REPODEST=$ABUILDHOME/repo
+
+# Create abuild user
+adduser -h $ABUILDHOME -G abuild -D abuild
+mkdir -p $ABUILDHOME/.abuild $ABUILDHOME/.ssh $REPODEST
+
+KEYNAME="${KEYNAME:-$PLUGIN_KEYNAME}"
+PUBLICKEY="${PUBLICKEY:-$PLUGIN_PUBLICKEY}"
+SIGNINGKEY="${SIGNINGKEY:-$PLUGIN_SIGNINGKEY}"
+
+if [ -n "$PUBLICKEY" ]; then
+    # If PUBLICKEY variable is inline, put it straight in the file
+    if case "$PUBLICKEY" in "-----BEGIN"*) true;; *) false;; esac; then
+
+        # Ensure a KEYNAME is provided otherwise we can't know where to put the file
+        [ -z "$KEYNAME" ] && error "Inline publickey/signingkey provided but no keyname specified"
+
+        # Save the key into the file
+        echo "$PUBLICKEY" > /etc/apk/keys/${KEYNAME}.rsa.pub
+    else
+        # Ensure we set the keyname for SIGNINGKEY use but don't override one if already set
+        [ -n "$KEYNAME" ] && KEYNAME="$(basename "$PUBLICKEY" | cut -d. -f1)"
+
+        wget -O /etc/apk/keys/$KEYNAME.rsa.pub "$PUBLICKEY"
+    fi
+else
+    warn 'No publickey provided'
+fi
+if [ -n "$SIGNINGKEY" ]; then
+    echo "$SIGNINGKEY" > $ABUILDHOME/.abuild/${KEYNAME}.rsa
+    export PACKAGER_PRIVKEY="${KEYNAME}.rsa"
+else
+    warn 'No signingkey provided'
+fi
+
+# Add the ssh key if specified
+if [ -n "$SSHKEY" ]; then
+    echo "$SSHKEY" > $ABUILDHOME/.ssh/id_rsa
+    chmod 700 $ABUILDHOME/.ssh
+    chmod 600 $ABUILDHOME/.ssh/*
+    chown abuild:abuild -R $ABUILDHOME/.ssh
+fi
+
+# Mount sshfs volumes if requested
+if [ -n "$PLUGIN_REPO_SSHFS" ]; then
+    # Ensure /dev/fuse exists so we can mount sshfs
+    test -c /dev/fuse || mknod -m 666 /dev/fuse c 10 229
+    sshfs -o StrictHostKeyChecking=no "$PLUGIN_REPO_SSHFS" $REPODEST
+fi
+
+# Build the package!
+su-exec abuild:abuild abuild ${PLUGIN_ABUILD--r}
+
+if [ -n "$PLUGIN_REPO_SSHFS" ]; then
+    umount "$REPODEST"
+fi

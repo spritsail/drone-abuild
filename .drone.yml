@@ -1,0 +1,35 @@
+pipeline:
+  build:
+    image: spritsail/docker-build
+    volumes: [ '/var/run/docker.sock:/var/run/docker.sock' ]
+    repo: abuild-dev
+    build_args:
+      - ALPINE_TAG=${ALPINE_TAG%%,*}
+
+  test:
+    image: docker
+    volumes: [ '/var/run/docker.sock:/var/run/docker.sock' ]
+    commands:
+      - docker run --rm -e PLUGIN_ABUILD=--help abuild-dev
+
+  publish:
+    image: spritsail/docker-publish
+    when: { branch: [ master ], event: [ push, tag, deployment ] }
+    volumes: [ '/var/run/docker.sock:/var/run/docker.sock' ]
+    secrets: [ docker_username, docker_password, microbadger_token ]
+    from: abuild-dev
+    repo: spritsail/abuild
+    tags: ${ALPINE_TAG}
+
+  notify:
+    image: spritsail/notify
+    when: { status: [ success, failure ] }
+    secrets: [ webhook_url, notify_token ]
+
+matrix:
+  ALPINE_TAG:
+    - 3.5
+    - 3.6
+    - 3.7
+    - 3.8,latest
+    - edge
