@@ -10,7 +10,7 @@ pipeline:
     image: docker
     volumes: [ '/var/run/docker.sock:/var/run/docker.sock' ]
     commands:
-      - docker run --rm -e PLUGIN_ABUILD=--help abuild-dev
+      - docker run --rm -e PLUGIN_ABUILD=-help abuild-dev
 
   publish:
     image: spritsail/docker-publish

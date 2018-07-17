@@ -7,8 +7,8 @@ if [ -t 2 ]; then
     YLW='\033[0;33m'
     NC='\033[0m'
 fi
-error() { >&2 printf "${RED}${MSG:-Error}: $@${NC}"; exit 1; }
-warn() { >&2 printf "${YLW}${MSG:-Warning}: $@${NC}"; }
+error() { >&2 printf "${RED}${MSG:-Error}: $@${NC}\n"; exit 1; }
+warn() { >&2 printf "${YLW}${MSG:-Warning}: $@${NC}\n"; }
 
 export ABUILDHOME=/drone
 export REPODEST=$ABUILDHOME/repo
