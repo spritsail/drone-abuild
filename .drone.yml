@@ -25,6 +25,7 @@ pipeline:
     image: spritsail/notify
     when: { status: [ success, failure ] }
     secrets: [ webhook_url, notify_token ]
+    tag: ${ALPINE_TAG%%,*}
 
 matrix:
   ALPINE_TAG:
