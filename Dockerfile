@@ -11,8 +11,9 @@ LABEL maintainer="Spritsail <drone-abuild@spritsail.io>" \
       org.label-schema.version=${VCS_REF}
 
 COPY entrypoint /usr/local/bin/entrypoint
+COPY run-abuild /usr/local/bin/run-abuild
 
-RUN chmod +x /usr/local/bin/entrypoint \
+RUN chmod +x /usr/local/bin/entrypoint /usr/local/bin/run-abuild \
  && apk add --no-cache alpine-sdk openssh-client rsync sshfs sudo su-exec \
     \
  && mkdir -p /var/cache/distfiles \

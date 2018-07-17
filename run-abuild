@@ -1,0 +1,68 @@
+#!/bin/sh
+set -e
+
+# Only use error colours when stdout is a tty
+if [ -t 2 ]; then
+    RED='\033[0;31m'
+    YLW='\033[0;33m'
+    NC='\033[0m'
+fi
+error() { >&2 printf "${RED}${MSG:-Error}: $@${NC}\n"; exit 1; }
+warn() { >&2 printf "${YLW}${MSG:-Warning}: $@${NC}\n"; }
+
+KEYNAME="${KEYNAME:-$PLUGIN_KEYNAME}"
+PUBLICKEY="${PUBLICKEY:-$PLUGIN_PUBLICKEY}"
+SIGNINGKEY="${SIGNINGKEY:-$PLUGIN_SIGNINGKEY}"
+
+export REPODEST=$HOME/repo
+mkdir -p $HOME/.abuild $HOME/.ssh $REPODEST
+
+if [ -n "$PUBLICKEY" ]; then
+    # If PUBLICKEY variable is inline, put it straight in the file
+    if case "$PUBLICKEY" in "-----BEGIN"*) true;; *) false;; esac; then
+
+        # Ensure a KEYNAME is provided otherwise we can't know where to put the file
+        [ -z "$KEYNAME" ] && error "Inline publickey/signingkey provided but no keyname specified"
+
+        # Save the key into the file
+        echo "$PUBLICKEY" > /etc/apk/keys/${KEYNAME}.rsa.pub
+    else
+        # Ensure we set the keyname for SIGNINGKEY use but don't override one if already set
+        [ -z "$KEYNAME" ] && KEYNAME="$(basename "$PUBLICKEY" | cut -d. -f1)"
+
+        wget -O $HOME/.abuild/$KEYNAME.rsa.pub "$PUBLICKEY"
+    fi
+
+    # Copy public key into global key store
+    sudo cp $HOME/.abuild/$KEYNAME.rsa.pub /etc/apk/keys/
+else
+    warn 'No publickey provided'
+fi
+if [ -n "$SIGNINGKEY" ]; then
+    echo "$SIGNINGKEY" > $HOME/.abuild/${KEYNAME}.rsa
+    export PACKAGER_PRIVKEY="${KEYNAME}.rsa"
+else
+    warn 'No signingkey provided'
+fi
+
+# Add the ssh key if specified
+if [ -n "$SSHKEY" ]; then
+    echo "$SSHKEY" > $HOME/.ssh/id_rsa
+    chmod 700 $HOME/.ssh
+    chmod 600 $HOME/.ssh/*
+fi
+
+# Mount sshfs volumes if requested
+if [ -n "$PLUGIN_REPO_SSHFS" ]; then
+    # Ensure /dev/fuse exists so we can mount sshfs
+    test -c /dev/fuse || sudo mknod -m 666 /dev/fuse c 10 229
+    sudo sed -i '/user_allow_other/s/^#//g' /etc/fuse.conf
+    sshfs -o idmap=user -o allow_other -o StrictHostKeyChecking=no -o IdentityFile=$HOME/.ssh/id_rsa "$PLUGIN_REPO_SSHFS" $REPODEST
+fi
+
+# Build the package!
+abuild ${PLUGIN_ABUILD--r}
+
+if [ -n "$PLUGIN_REPO_SSHFS" ]; then
+    sudo umount "$REPODEST"
+fi
