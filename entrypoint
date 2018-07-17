@@ -62,6 +62,9 @@ if [ -n "$PLUGIN_REPO_SSHFS" ]; then
     sshfs -o StrictHostKeyChecking=no -o IdentityFile=$ABUILDHOME/.ssh/id_rsa "$PLUGIN_REPO_SSHFS" $REPODEST
 fi
 
+# Ensure the abuild user has full permissions
+[ -n "$DRONE_WORKSPACE" ] && chown abuild:abuild -R "$DRONE_WORKSPACE"
+
 # Build the package!
 apk update
 su-exec abuild:abuild abuild ${PLUGIN_ABUILD--r}
