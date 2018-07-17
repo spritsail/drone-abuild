@@ -25,7 +25,7 @@ pipeline:
   build:
     image: spritsail/abuild
     privileged: true
-    secrets [ signingkey, sshkey ]
+    secrets: [ signingkey, sshkey ]
     publickey: https://mywebsite.com/pubilc-signing-key.rsa.pub
     repo_sshfs: 'user@alpine.mywebsite.com:alpine/'
     abuild: fetch checksum deps build ..
