@@ -15,6 +15,7 @@ export REPODEST=$ABUILDHOME/repo
 
 # Create abuild user
 adduser -h $ABUILDHOME -G abuild -D abuild
+echo "abuild    ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 mkdir -p $ABUILDHOME/.abuild $ABUILDHOME/.ssh $REPODEST
 
 KEYNAME="${KEYNAME:-$PLUGIN_KEYNAME}"
@@ -32,7 +33,7 @@ if [ -n "$PUBLICKEY" ]; then
         echo "$PUBLICKEY" > /etc/apk/keys/${KEYNAME}.rsa.pub
     else
         # Ensure we set the keyname for SIGNINGKEY use but don't override one if already set
-        [ -n "$KEYNAME" ] && KEYNAME="$(basename "$PUBLICKEY" | cut -d. -f1)"
+        [ -z "$KEYNAME" ] && KEYNAME="$(basename "$PUBLICKEY" | cut -d. -f1)"
 
         wget -O /etc/apk/keys/$KEYNAME.rsa.pub "$PUBLICKEY"
     fi
@@ -58,10 +59,11 @@ fi
 if [ -n "$PLUGIN_REPO_SSHFS" ]; then
     # Ensure /dev/fuse exists so we can mount sshfs
     test -c /dev/fuse || mknod -m 666 /dev/fuse c 10 229
-    sshfs -o StrictHostKeyChecking=no "$PLUGIN_REPO_SSHFS" $REPODEST
+    sshfs -o StrictHostKeyChecking=no -o IdentityFile=$ABUILDHOME/.ssh/id_rsa "$PLUGIN_REPO_SSHFS" $REPODEST
 fi
 
 # Build the package!
+apk update
 su-exec abuild:abuild abuild ${PLUGIN_ABUILD--r}
 
 if [ -n "$PLUGIN_REPO_SSHFS" ]; then

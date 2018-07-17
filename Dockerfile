@@ -13,7 +13,12 @@ LABEL maintainer="Spritsail <drone-abuild@spritsail.io>" \
 COPY entrypoint /usr/local/bin/entrypoint
 
 RUN chmod +x /usr/local/bin/entrypoint \
- && apk add --no-cache alpine-sdk openssh-client rsync sshfs su-exec \
+ && apk add --no-cache alpine-sdk openssh-client rsync sshfs sudo su-exec \
+    \
+ && mkdir -p /var/cache/distfiles \
+ && chmod g+w /var/cache/distfiles \
+ && chgrp abuild /var/cache/distfiles \
+    \
  && if [ "$ALPINE_TAG" = edge ]; then \
        echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories; \
     fi
