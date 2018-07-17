@@ -39,8 +39,8 @@ else
     warn 'No publickey provided'
 fi
 if [ -n "$SIGNINGKEY" ]; then
-    echo "$SIGNINGKEY" > $HOME/.abuild/${KEYNAME}.rsa
-    export PACKAGER_PRIVKEY="${KEYNAME}.rsa"
+    export PACKAGER_PRIVKEY="/tmp/${KEYNAME}.rsa"
+    echo "$SIGNINGKEY" > "$PACKAGER_PRIVKEY"
 else
     warn 'No signingkey provided'
 fi
