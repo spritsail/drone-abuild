@@ -20,8 +20,10 @@ RUN chmod +x /usr/local/bin/entrypoint /usr/local/bin/run-abuild \
  && chmod g+w /var/cache/distfiles \
  && chgrp abuild /var/cache/distfiles \
     \
- && if [ "$ALPINE_TAG" = edge ]; then \
-       echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories; \
-    fi
+    # Every version of Alpine has access to testing packages
+    # Versions from main/community repos take priority though
+    # Only packages _exclusively_ available in edge/testing will
+    # be installed by default.
+ && echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
