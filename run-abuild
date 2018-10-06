@@ -56,7 +56,7 @@ fi
 if [ -n "$PLUGIN_REPO_SSHFS" ]; then
     # Ensure /dev/fuse exists so we can mount sshfs
     test -c /dev/fuse || sudo mknod -m 666 /dev/fuse c 10 229
-    sudo sed -i '/user_allow_other/s/^#//g' /etc/fuse.conf
+    sudo sh -c 'echo user_allow_other >> /etc/fuse.conf'
     sshfs -o idmap=user -o allow_other -o StrictHostKeyChecking=no -o IdentityFile=$HOME/.ssh/id_rsa "$PLUGIN_REPO_SSHFS" $REPODEST
 fi
 
