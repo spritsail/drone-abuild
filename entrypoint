@@ -5,6 +5,9 @@ ABUILDHOME=/drone
 
 # Create abuild user
 adduser -h $ABUILDHOME -G abuild -D abuild
+# Add user to fuse group for sshfs purposes
+addgroup -S fuse || true
+adduser abuild fuse
 chown abuild:abuild $ABUILDHOME
 echo "abuild    ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
